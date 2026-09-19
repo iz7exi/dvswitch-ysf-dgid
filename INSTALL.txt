@@ -1,0 +1,123 @@
+===============================================================================
+ YSF DG-ID for DVSwitch Mobile - INSTALLATION INSTRUCTIONS
+===============================================================================
+
+WHAT IT DOES
+------------
+Adds a "YSF DG-ID" entry to the DVSwitch Mobile menu, letting you pick the
+DG-ID (00-99) to use on a multi-stream C4FM reflector (pYSFReflector3 / YCS)
+straight from your phone.
+
+When you select a value the node sets the -nn suffix on the YSFGateway
+callsign and the Options=nn line, restarts the gateway and re-links the room
+you were on by itself. About 13 seconds, no manual step.
+
+
+BEFORE YOU START - REQUIREMENTS
+-------------------------------
+1) DVSwitch with Analog_Bridge and MMDVM_Bridge
+2) DVSwitch advanced menu present (/opt/Analog_Bridge/dvsm.sh)
+3) YSFGateway managed by systemd
+4) base callsign in [General] of YSFGateway.ini NO LONGER THAN 7 CHARACTERS
+   (the YSF field is 10 and the -nn suffix takes 3)
+5) a reflector with DG-ID management
+
+Check for point 4 over ssh:
+
+    grep -n "Callsign" /opt/YSFGateway/YSFGateway.ini
+
+If the callsign is longer than 7 characters the script stops without touching
+anything.
+
+
+STEP 1 - COPY THE SCRIPT TO THE SERVER
+--------------------------------------
+Option A, download it directly on the node:
+
+    wget https://raw.githubusercontent.com/iz7exi/dvswitch-ysf-dgid/main/dvsm_ysf_dgid.sh
+
+Option B, from Linux/Mac:
+
+    scp dvsm_ysf_dgid.sh root@SERVER_IP:/root/
+
+Option B, from Windows with PuTTY installed:
+
+    pscp dvsm_ysf_dgid.sh root@SERVER_IP:/root/
+
+Option C, copy and paste inside the ssh session, no file transfer. Log in to
+the server and type:
+
+    cat > /root/dvsm_ysf_dgid.sh << 'END'
+
+press ENTER, paste the whole file content (right mouse button in PuTTY),
+press ENTER again, type END and press ENTER.
+
+
+STEP 2 - INSTALL
+----------------
+Over ssh on the server:
+
+    chmod +x /root/dvsm_ysf_dgid.sh
+    /root/dvsm_ysf_dgid.sh
+
+The script creates timestamped backups of dvsm.sh, dvsm.macro, adv_main.txt
+and YSFGateway.ini before any change.
+
+If paths or service names differ on your system:
+
+    AB_DIR=/opt/Analog_Bridge \
+    YSF_INI=/opt/YSFGateway/YSFGateway.ini \
+    SERVICE_YSF=ysfgateway \
+    SERVICE_AB=analog_bridge \
+    /root/dvsm_ysf_dgid.sh
+
+
+STEP 3 - USE IT
+---------------
+Reconnect the DVSwitch Mobile app, switch to YSF mode and link the room.
+
+    main menu -> YSF DG-ID -> band of ten -> value
+
+The display shows "WAIT DG-ID nn" and then "OK DG-ID nn" once re-linked.
+
+
+CHECKS, over ssh
+----------------
+Configuration written:
+
+    grep -n "Callsign\|Options" /opt/YSFGateway/YSFGateway.ini
+
+Gateway activity (replace the date with today's):
+
+    tail -n 20 /var/log/mmdvm/YSFGateway-$(date +%Y-%m-%d).log
+
+In the log, at the CONNECT Reply line, the callsign must carry the suffix of
+the DG-ID you selected.
+
+
+UNINSTALL
+---------
+    /root/dvsm_ysf_dgid.sh --uninstall
+
+Removes menus, macros and handler. The Suffix line in YSFGateway.ini is left
+commented out: re-enable it by hand if you need it.
+
+
+IMPORTANT NOTES
+---------------
+- works in YSF MODE ONLY
+- DG-ID 00 removes suffix and Options: back to the default stream
+- the DG-ID must be ACTIVE on the reflector, otherwise you stay on the
+  default and it looks like nothing happened
+- the script comments out Suffix in YSFGateway.ini: without it the callsign
+  gets truncated and the reflector does not recognise the DG-ID. As a result
+  the node appears as CALL-nn on ALL YSF networks, not only the multi-stream
+  one
+- on reflectors without DG-ID management (plain YSFReflector, FCS) the menu
+  works but has no effect
+- the setting is persistent: after a reboot the DG-ID is still set. The room
+  link is not, and has to be re-established
+
+
+IZ7EXI - MP-BAT network, Barletta, Italy
+===============================================================================
